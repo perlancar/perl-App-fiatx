@@ -1,0 +1,43 @@
+#!perl
+
+use 5.010001;
+use strict;
+use warnings;
+
+# DATE
+# VERSION
+
+use Perinci::CmdLine::Any;
+
+my $prefix = '/App/fiatx/';
+
+Perinci::CmdLine::Any->new(
+    url => $prefix,
+    subcommands => {
+        convert => {url => "${prefix}convert"},
+    },
+)->run;
+
+# ABSTRACT: Get fiat currency conversion rates and convert currencies
+
+=head1 SYNOPSIS
+
+First, create a MySQL database e.g. C<fiatx>. Then set F<~/.config/fiatx.conf>:
+
+ db_name=fiatx
+ ; the app can also look for passwords in my.cnf
+ ; db_username=...
+ ; db_password=...
+
+ ; use these currencies for default
+ from=USD
+ to=IDR
+
+then:
+
+ % fiatx convert ;# by default convert 1 unit of 'from' currency to 'to' currency
+
+For more details, use C<fiatx --help> or consult documentation.
+
+
+=head1 DESCRIPTION
