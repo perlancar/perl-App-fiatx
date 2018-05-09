@@ -19,6 +19,7 @@ Perinci::CmdLine::Any->new(
 )->run;
 
 # ABSTRACT: Get fiat currency conversion rates and convert currencies
+# PODNAME:
 
 =head1 SYNOPSIS
 
