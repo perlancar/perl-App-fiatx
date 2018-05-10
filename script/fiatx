@@ -13,6 +13,7 @@ my $prefix = '/App/fiatx/';
 
 Perinci::CmdLine::Any->new(
     url => $prefix,
+    log => 1,
     subcommands => {
         convert => {url => "${prefix}convert"},
     },
