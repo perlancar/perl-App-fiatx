@@ -15,29 +15,62 @@ Perinci::CmdLine::Any->new(
     url => $prefix,
     log => 1,
     subcommands => {
-        convert => {url => "${prefix}convert"},
+        'spot-rate'      => {url => "${prefix}spot_rate"},
+        'all-spot-rates' => {url => "${prefix}all_spot_rates"},
+        'sources'        => {url => "${prefix}sources"},
     },
 )->run;
 
-# ABSTRACT: Get fiat currency conversion rates and convert currencies
+# ABSTRACT: Get fiat currency conversion rates
 # PODNAME:
 
 =head1 SYNOPSIS
 
-First, create a MySQL database e.g. C<fiatx>. Then set F<~/.config/fiatx.conf>:
+First, create a MySQL database e.g. C<fiatx>. Then in F<~/.config/fiatx.conf>:
 
  db_name=fiatx
  ; the app can also look for passwords in my.cnf
  ; db_username=...
  ; db_password=...
 
- ; use these currencies for default
- from=USD
- to=IDR
+To get conversion rates of USD/IDR (by default the dealer's 'sell' rate):
 
-then:
+ % fiatx spot-rate USD IDR
 
- % fiatx convert ;# by default convert 1 unit of 'from' currency to 'to' currency
+By default result is cached for 4 hours, to force querying from the source
+again:
+
+ % fiatx spot-rate USD IDR --no-cache
+
+To get dealer's 'buy' rate:
+
+ % fiatx spot-rate USD IDR --type buy
+
+To query from a specific source:
+
+ % fiatx spot-rate USD IDR --source bi
+
+To get highest/lowest rate of all sources:
+
+ % fiatx spot-rate USD IDR --source :highest
+ % fiatx spot-rate USD IDR --source :lowest
+
+To get rate from source with the newest/oldest update:
+
+ % fiatx spot-rate USD IDR --source :newest
+ % fiatx spot-rate USD IDR --source :oldest
+
+To get rate averaged from several sources:
+
+ % fiatx spot-rate USD IDR --source :average
+
+To list available sources:
+
+ % fiatx sources
+
+To get all spot rates from a source:
+
+ % fiatx all-spot-rates bca
 
 For more details, use C<fiatx --help> or consult documentation.
 
