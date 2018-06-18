@@ -1,3 +1,8 @@
+0.004   2018-06-19 (PERLANCAR)
+
+	- Forgot to bump dep version: Finance::Currency::FiatX 0 -> 0.004.
+
+
 0.003   2018-06-19 (PERLANCAR)
 
 	- Adjust to Finance::Currency::FiatX 0.004: replace 'convert' subcommand
