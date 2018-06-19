@@ -1,3 +1,10 @@
+0.005   2018-06-19 (PERLANCAR)
+
+	- No functional changes.
+
+	- Tweak Abstract.
+
+
 0.004   2018-06-19 (PERLANCAR)
 
 	- Forgot to bump dep version: Finance::Currency::FiatX 0 -> 0.004.
