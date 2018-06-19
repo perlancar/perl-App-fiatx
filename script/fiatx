@@ -21,7 +21,7 @@ Perinci::CmdLine::Any->new(
     },
 )->run;
 
-# ABSTRACT: Get fiat currency conversion rates
+# ABSTRACT: Fiat currency exchange rate tool
 # PODNAME:
 
 =head1 SYNOPSIS

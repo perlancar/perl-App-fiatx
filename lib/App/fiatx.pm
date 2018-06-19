@@ -11,6 +11,11 @@ use Finance::Currency::FiatX;
 
 our %SPEC;
 
+$SPEC{':package'} = {
+    v => 1.1,
+    summary => 'Fiat currency exchange rate tool',
+};
+
 our %args_db = (
     db_name => {
         schema => 'str*',
