@@ -34,6 +34,14 @@ our %args_db = (
     },
 );
 
+our %arg_per_type = (
+    per_type => {
+        schema => 'bool*',
+    },
+);
+
+my $fnum8 = [number => {precision=>8}];
+
 sub _connect {
     my $args = shift;
 
@@ -95,7 +103,7 @@ sub spot_rate {
 
     my $dbh = _connect(\%args);
 
-    Finance::Currency::FiatX::get_spot_rate(
+    my $bres = Finance::Currency::FiatX::get_spot_rate(
         dbh => $dbh,
 
         _supply(\%args, \%Finance::Currency::FiatX::args_caching),
@@ -110,6 +118,7 @@ $SPEC{all_spot_rates} = {
         %args_db,
         %Finance::Currency::FiatX::args_caching,
         %Finance::Currency::FiatX::arg_req0_source,
+        %arg_per_type,
     },
 };
 sub all_spot_rates {
@@ -117,12 +126,47 @@ sub all_spot_rates {
 
     my $dbh = _connect(\%args);
 
-    Finance::Currency::FiatX::get_all_spot_rates(
+    my $bres = Finance::Currency::FiatX::get_all_spot_rates(
         dbh => $dbh,
 
         _supply(\%args, \%Finance::Currency::FiatX::args_caching),
         _supply(\%args, \%Finance::Currency::FiatX::arg_req0_source),
     );
+    return $bres unless $bres->[0] == 200 || $bres->[0] == 304;
+
+    my @rows;
+    my $resmeta = {};
+
+    if ($args{per_type}) {
+        for (@{ $bres->[2] }) {
+            delete $_->{source};
+            push @rows, $_;
+        }
+        $resmeta->{'table.fields'}        = ['pair', 'type' , 'rate' , 'note'];
+        $resmeta->{'table.field_formats'} = [undef , undef  , $fnum8 , undef ];
+        $resmeta->{'table.field_aligns'}  = ['left', 'right', 'right', 'left'];
+    } else {
+        my %per_pair_rates;
+        for my $r (@{ $bres->[2] }) {
+            $per_pair_rates{ $r->{pair} } //= {
+                pair => $r->{pair},
+                mtime => 0,
+            };
+            next unless $r->{type} =~ /^(buy|sell)/;
+            $per_pair_rates{ $r->{pair} }{ $r->{type} } = $r->{rate};
+            $per_pair_rates{ $r->{pair} }{mtime} = $r->{mtime}
+                if $per_pair_rates{ $r->{pair} }{mtime} < $r->{mtime};
+        }
+        for my $pair (sort keys %per_pair_rates) {
+            push @rows, $per_pair_rates{$pair};
+        }
+        use DD; dd \%per_pair_rates;
+        $resmeta->{'table.fields'}        = ['pair', 'buy'  , 'sell' , 'mtime'           ];
+        $resmeta->{'table.field_formats'} = [undef , $fnum8 , $fnum8 , 'iso8601_datetime'];
+        $resmeta->{'table.field_aligns'}  = ['left', 'right', 'right', 'left'];
+    }
+
+    [200, "OK", \@rows, $resmeta];
 }
 
 1;
