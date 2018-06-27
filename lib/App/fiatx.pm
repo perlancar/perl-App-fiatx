@@ -160,10 +160,11 @@ sub all_spot_rates {
         for my $pair (sort keys %per_pair_rates) {
             push @rows, $per_pair_rates{$pair};
         }
-        use DD; dd \%per_pair_rates;
         $resmeta->{'table.fields'}        = ['pair', 'buy'  , 'sell' , 'mtime'           ];
         $resmeta->{'table.field_formats'} = [undef , $fnum8 , $fnum8 , 'iso8601_datetime'];
         $resmeta->{'table.field_aligns'}  = ['left', 'right', 'right', 'left'];
+        $resmeta->{'table.field_align_code'}  = sub { $_[0] =~ /^(buy|sell)/ ? 'right' : undef },
+        $resmeta->{'table.field_format_code'} = sub { $_[0] =~ /^(buy|sell)/ ? $fnum8  : undef },
     }
 
     [200, "OK", \@rows, $resmeta];
