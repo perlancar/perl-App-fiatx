@@ -32,44 +32,47 @@ First, create a MySQL database e.g. C<fiatx>. Then in F<~/.config/fiatx.conf>:
  ; db_username=...
  ; db_password=...
 
-To get conversion rates of USD/IDR (by default the dealer's 'sell' rate):
+To see all conversion rates for all pairs and all sources (possible huge list
+and takes a long time):
 
- % fiatx spot-rate USD IDR
+ % fiatx spot-rates
 
-By default result is cached for 4 hours, to force querying from the source
-again:
+To see conversion rates for all pairs from a single source e.g. C<bca> (note:
+not all sources might support this):
 
- % fiatx spot-rate USD IDR --no-cache
-
-To get dealer's 'buy' rate:
-
- % fiatx spot-rate USD IDR --type buy
-
-To query from a specific source:
-
- % fiatx spot-rate USD IDR --source bi
-
-To get highest/lowest rate of all sources:
-
- % fiatx spot-rate USD IDR --source :highest
- % fiatx spot-rate USD IDR --source :lowest
-
-To get rate from source with the newest/oldest update:
-
- % fiatx spot-rate USD IDR --source :newest
- % fiatx spot-rate USD IDR --source :oldest
-
-To get rate averaged from several sources:
-
- % fiatx spot-rate USD IDR --source :average
+ % fiatx spot-rates bca
 
 To list available sources:
 
  % fiatx sources
 
-To get all spot rates from a source:
+To see conversion rates for a single pair and type from a single source e.g.
+C<bca>:
 
- % fiatx all-spot-rates bca
+ % fiatx spot-rates bca USD/IDR sell
+
+By default result is cached in database for a few hours. To force fetching from
+remote source again:
+
+ % fiatx spot-rate bca USD/IDR sell --no-cache
+
+To get another type:
+
+ % fiatx spot-rate bca USD/IDR buy
+
+To get highest/lowest rate of all sources:
+
+ % fiatx spot-rate :highest USD/IDR
+ % fiatx spot-rate :lowest  USD/IDR
+
+To get rate from source with the newest/oldest update:
+
+ % fiatx spot-rate :newest USD/IDR
+ % fiatx spot-rate :oldest USD/IDR
+
+To get rate averaged from several sources:
+
+ % fiatx spot-rate :average USD/IDR
 
 For more details, use C<fiatx --help> or consult documentation.
 
