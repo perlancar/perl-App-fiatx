@@ -15,8 +15,7 @@ Perinci::CmdLine::Any->new(
     url => $prefix,
     log => 1,
     subcommands => {
-        'spot-rate'      => {url => "${prefix}spot_rate"},
-        'all-spot-rates' => {url => "${prefix}all_spot_rates"},
+        'spot-rates'     => {url => "${prefix}spot_rates"},
         'sources'        => {url => "${prefix}sources"},
     },
 )->run;

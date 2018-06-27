@@ -36,7 +36,14 @@ our %args_db = (
 
 our %arg_per_type = (
     per_type => {
+        summary => 'Return one row of result per rate type',
         schema => 'bool*',
+        description => <<'_',
+
+This allow seeing notes and different mtime per rate type, which can be
+different between different types of the same source.
+
+_
     },
 );
 
@@ -52,18 +59,6 @@ sub _connect {
         $args->{db_password},
         {RaiseError=>1},
     );
-}
-
-sub _supply {
-    my ($args, $args_spec) = @_;
-
-    my %res;
-    for (keys %$args_spec) {
-        if (exists $args->{$_}) {
-            $res{$_} = $args->{$_};
-        }
-    }
-    %res;
 }
 
 $SPEC{sources} = {
@@ -89,82 +84,136 @@ sub sources {
     [200, "OK", \@res];
 }
 
-$SPEC{spot_rate} = {
-    v => 1.1,
-    summary => 'Get spot (latest) rate',
-    args => {
-        %args_db,
-        %Finance::Currency::FiatX::args_caching,
-        %Finance::Currency::FiatX::args_spot_rate,
+my %arg_0_source = (
+    source => {
+        %{ $Finance::Currency::FiatX::arg_source{source} },
+        pos => 0,
+        default => ':all',
     },
-};
-sub spot_rate {
-    my %args = @_;
+);
 
-    my $dbh = _connect(\%args);
+my %arg_1_pair = (
+    pair => {
+        schema => 'currency::pair*',
+        pos => 1,
+    },
+);
 
-    my $bres = Finance::Currency::FiatX::get_spot_rate(
-        dbh => $dbh,
+my %arg_2_type = (
+    type => {
+        %{ $Finance::Currency::FiatX::args_spot_rate{type} },
+        pos => 2,
+    },
+);
 
-        _supply(\%args, \%Finance::Currency::FiatX::args_caching),
-        _supply(\%args, \%Finance::Currency::FiatX::args_spot_rate),
-    );
-}
-
-$SPEC{all_spot_rates} = {
+$SPEC{spot_rates} = {
     v => 1.1,
-    summary => 'Get all spot (latest) rates from a source',
+    summary => 'Get spot (latest) rate(s) from a source',
     args => {
         %args_db,
         %Finance::Currency::FiatX::args_caching,
-        %Finance::Currency::FiatX::arg_req0_source,
+        %arg_0_source,
+        %arg_1_pair,
+        %arg_2_type,
         %arg_per_type,
     },
 };
-sub all_spot_rates {
+sub spot_rates {
     my %args = @_;
+
+    my $source = $args{source};
+    my $pair   = $args{pair};
+    my $type   = $args{type};
+
+    my ($from, $to); ($from, $to) = $pair =~ m!(.+)/(.+)! if $pair;
 
     my $dbh = _connect(\%args);
 
-    my $bres = Finance::Currency::FiatX::get_all_spot_rates(
-        dbh => $dbh,
+    my $rows0;
 
-        _supply(\%args, \%Finance::Currency::FiatX::args_caching),
-        _supply(\%args, \%Finance::Currency::FiatX::arg_req0_source),
-    );
-    return $bres unless $bres->[0] == 200 || $bres->[0] == 304;
+    if ($source ne ':all' && $pair && $type) {
+        my $bres = Finance::Currency::FiatX::get_spot_rate(
+            dbh => $dbh,
+            max_age_cache => $args{max_age_cache},
+            source        => $source,
+            from          => $from,
+            to            => $to,
+            type          => $type,
+        );
+        return $bres unless $bres->[0] == 200 || $bres->[0] == 304;
+        $rows0 = [$bres->[2]];
+    } else {
+        my $bres = Finance::Currency::FiatX::get_all_spot_rates(
+            dbh => $dbh,
+            max_age_cache => $args{max_age_cache},
+            source        => $source,
+        );
+        return $bres unless $bres->[0] == 200 || $bres->[0] == 304;
+        $rows0 = $bres->[2];
+    }
 
     my @rows;
     my $resmeta = {};
 
     if ($args{per_type}) {
-        for (@{ $bres->[2] }) {
-            delete $_->{source};
+        for (@$rows0) {
+            delete $_->{source} unless $source eq ':all';
             push @rows, $_;
         }
-        $resmeta->{'table.fields'}        = ['pair', 'type' , 'rate' , 'note'];
-        $resmeta->{'table.field_formats'} = [undef , undef  , $fnum8 , undef ];
-        $resmeta->{'table.field_aligns'}  = ['left', 'right', 'right', 'left'];
+        $resmeta->{'table.fields'}        = ['source', 'pair', 'type' , 'rate' , 'note'];
+        $resmeta->{'table.field_formats'} = [undef   , undef , undef  , $fnum8 , undef ];
+        $resmeta->{'table.field_aligns'}  = ['left'  , 'left', 'right', 'right', 'left'];
+        unless ($source eq ':all') {
+            shift @{ $resmeta->{'table.fields'} };
+            shift @{ $resmeta->{'table.field_formats'} };
+            shift @{ $resmeta->{'table.field_aligns'} };
+        }
     } else {
-        my %per_pair_rates;
-        for my $r (@{ $bres->[2] }) {
-            $per_pair_rates{ $r->{pair} } //= {
-                pair => $r->{pair},
-                mtime => 0,
-            };
-            next unless $r->{type} =~ /^(buy|sell)/;
-            $per_pair_rates{ $r->{pair} }{ $r->{type} } = $r->{rate};
-            $per_pair_rates{ $r->{pair} }{mtime} = $r->{mtime}
-                if $per_pair_rates{ $r->{pair} }{mtime} < $r->{mtime};
+        my %sources;
+        for my $r (@$rows0) {
+            my $src = $r->{source} // '';
+            $sources{ $src }++;
         }
-        for my $pair (sort keys %per_pair_rates) {
-            push @rows, $per_pair_rates{$pair};
+
+        for my $src (sort keys %sources) {
+            my %per_pair_rates;
+            for my $r (@$rows0) {
+                next unless ($r->{source} // '') eq $src;
+                $per_pair_rates{ $r->{pair} } //= {
+                    pair => $r->{pair},
+                    mtime => 0,
+                };
+                $per_pair_rates{ $r->{pair} }{source} = $src
+                    unless $source eq $src;
+                next unless $r->{type} =~ /^(buy|sell)/;
+                $per_pair_rates{ $r->{pair} }{ $r->{type} } = $r->{rate};
+                $per_pair_rates{ $r->{pair} }{mtime} = $r->{mtime}
+                    if $per_pair_rates{ $r->{pair} }{mtime} < $r->{mtime};
+            }
+            for my $pair (sort keys %per_pair_rates) {
+                push @rows, $per_pair_rates{$pair};
+            }
         }
-        $resmeta->{'table.fields'}        = ['pair', 'buy'  , 'sell' , 'mtime'           ];
-        $resmeta->{'table.field_formats'} = [undef , $fnum8 , $fnum8 , 'iso8601_datetime'];
-        $resmeta->{'table.field_aligns'}  = ['left', 'right', 'right', 'left'];
+        $resmeta->{'table.fields'}        = ['source', 'pair', 'buy'  , 'sell' , 'mtime'           ];
+        $resmeta->{'table.field_formats'} = [undef   , undef , $fnum8 , $fnum8 , 'iso8601_datetime'];
+        $resmeta->{'table.field_aligns'}  = ['left'  , 'left', 'right', 'right', 'left'];
+        if ($source =~ /\A\w+\z/) {
+            shift @{ $resmeta->{'table.fields'} };
+            shift @{ $resmeta->{'table.field_formats'} };
+            shift @{ $resmeta->{'table.field_aligns'} };
+        }
         $resmeta->{'table.field_align_code'}  = sub { $_[0] =~ /^(buy|sell)/ ? 'right' : undef },
         $resmeta->{'table.field_format_code'} = sub { $_[0] =~ /^(buy|sell)/ ? $fnum8  : undef },
+    }
+
+  FILTER_ROWS:
+    {
+        my @rows_f;
+        for (@rows) {
+            next if $pair && $_->{pair} ne $pair;
+            push @rows_f, $_;
+        }
+        @rows = @rows_f;
     }
 
     [200, "OK", \@rows, $resmeta];
