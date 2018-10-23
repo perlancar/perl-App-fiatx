@@ -9,15 +9,9 @@ use warnings;
 
 use Perinci::CmdLine::Any;
 
-my $prefix = '/App/fiatx/';
-
 Perinci::CmdLine::Any->new(
-    url => $prefix,
+    url => "/App/fiatx/fiatx",
     log => 1,
-    subcommands => {
-        'spot-rates'     => {url => "${prefix}spot_rates"},
-        'sources'        => {url => "${prefix}sources"},
-    },
 )->run;
 
 # ABSTRACT: Fiat currency exchange rate tool
@@ -32,49 +26,28 @@ First, create a MySQL database e.g. C<fiatx>. Then in F<~/.config/fiatx.conf>:
  ; db_username=...
  ; db_password=...
 
-To see all conversion rates for all pairs and all sources (possible huge list
-and takes a long time):
+ ; optional. this way, you can just specify USD instead of USD/IDR
+ ;default_quote_currency=IDR
 
- % fiatx spot-rates
+Then:
 
-To see conversion rates for all pairs from a single source e.g. C<bca> (note:
-not all sources might support this):
+ # Check USD/IDR rates from all sources
+ % fiatx USD/IDR
+ % fiatx USD      ;# works, if you have set default_quote_currency to IDR
 
- % fiatx spot-rates bca
+ # Check rate from specific source(s) only
+ % fiatx usd -s bca
+ % fiatx usd -s bca -s bi
 
-To list available sources:
+ # Check rate and prefer specific types only (in this case: bank notes)
+ % fiatx usd -t bn
 
- % fiatx sources
+ # Check rates of all known pairs from all sources (possible huge list and takes
+ # a long time, turn on --trace to see progress):
+ % fiatx --all-pairs --trace
 
-To see conversion rates for a single pair and type from a single source e.g.
-C<bca>:
-
- % fiatx spot-rates bca USD/IDR sell
-
-By default result is cached in database for a few hours. To force fetching from
-remote source again:
-
- % fiatx spot-rate bca USD/IDR sell --no-cache
-
-To get another type:
-
- % fiatx spot-rate bca USD/IDR buy
-
-To get highest/lowest rate of all sources:
-
- % fiatx spot-rate :highest USD/IDR
- % fiatx spot-rate :lowest  USD/IDR
-
-To get rate from source with the newest/oldest update:
-
- % fiatx spot-rate :newest USD/IDR
- % fiatx spot-rate :oldest USD/IDR
-
-To get rate averaged from several sources:
-
- % fiatx spot-rate :average USD/IDR
-
-For more details, use C<fiatx --help> or consult documentation.
+ # See available sources
+ % fiatx -l
 
 
 =head1 DESCRIPTION
