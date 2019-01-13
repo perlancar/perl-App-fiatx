@@ -14,7 +14,7 @@ Perinci::CmdLine::Any->new(
     log => 1,
 )->run;
 
-# ABSTRACT: Fiat currency exchange rate tool
+# ABSTRACT: Currency exchange rate tool
 # PODNAME:
 
 =head1 SYNOPSIS
@@ -33,7 +33,7 @@ Then:
 
  # Check USD/IDR rates from all sources
  % fiatx USD/IDR
- % fiatx USD      ;# works, if you have set default_quote_currency to IDR
+ % fiatx usd      ;# works, if you have set default_quote_currency to IDR
 
  # Check rate from specific source(s) only
  % fiatx usd -s bca
