@@ -31,7 +31,7 @@ First, create a MySQL database e.g. C<fiatx>. Then in F<~/.config/fiatx.conf>:
 
 Then:
 
- # Check USD/IDR rates from all sources
+ # Check USD/IDR rates from any source
  % fiatx USD/IDR
  % fiatx usd      ;# works, if you have set default_quote_currency to IDR
 
